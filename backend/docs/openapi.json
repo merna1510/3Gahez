@@ -1,0 +1,1750 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Social Media REST API",
+    "version": "1.0.0",
+    "description": "\nA complete, beginner-friendly social media backend built with **Node.js**, **Express**,\n**MongoDB**, **Mongoose** and **JWT authentication**.\n\n## What you can do\n\n* Register and log in to receive a JWT.\n* Read and update your own profile.\n* Publish, read, update and delete posts (only the owner can modify a post).\n* Browse users and posts with pagination.\n\n## Authentication\n\n1. Call `POST /api/auth/register` or `POST /api/auth/login`.\n2. Copy the `token` value from the response.\n3. Click the **Authorize** button, paste the token and confirm.\n   Swagger UI automatically sends it as `Authorization: Bearer <token>`.\n4. Protected endpoints now work until the token expires.\n\nYou can also send the header manually:\n\n```\nAuthorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\n```\n\nTokens are signed with `JWT_SECRET` and expire after `JWT_EXPIRES_IN` (default: 7 days).\n\n## Response format\n\n**Success**\n\n```json\n{ \"success\": true, \"message\": \"Post created successfully\", \"data\": { \"post\": {} } }\n```\n\n**Error**\n\n```json\n{ \"success\": false, \"message\": \"Something went wrong\", \"errors\": [] }\n```\n\n`errors` is always an array. Validation errors contain `{ \"field\": \"email\", \"message\": \"...\" }`.\n",
+    "contact": {
+      "name": "Social Media API"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Service health and API information."
+    },
+    {
+      "name": "Auth",
+      "description": "Registration, login and the current user."
+    },
+    {
+      "name": "Users",
+      "description": "Public profiles and account management."
+    },
+    {
+      "name": "Posts",
+      "description": "Create and manage social media posts."
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Paste the JWT returned by /api/auth/register or /api/auth/login. Do not include the word \"Bearer\" in Swagger — it is added automatically."
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "description": "Authenticated user object. The password is never returned.",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "665f1c2a9b1e8a0012a4c111"
+          },
+          "name": {
+            "type": "string",
+            "example": "Ada Lovelace"
+          },
+          "username": {
+            "type": "string",
+            "example": "ada_lovelace"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "ada@example.com"
+          },
+          "profilePicture": {
+            "type": "string",
+            "example": "https://example.com/avatars/ada.png"
+          },
+          "bio": {
+            "type": "string",
+            "example": "Mathematician. First programmer."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PublicUser": {
+        "type": "object",
+        "description": "Public profile shown to other users. Email is hidden for privacy.",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "665f1c2a9b1e8a0012a4c111"
+          },
+          "name": {
+            "type": "string",
+            "example": "Ada Lovelace"
+          },
+          "username": {
+            "type": "string",
+            "example": "ada_lovelace"
+          },
+          "profilePicture": {
+            "type": "string",
+            "example": "https://example.com/avatars/ada.png"
+          },
+          "bio": {
+            "type": "string",
+            "example": "Mathematician. First programmer."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Post": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "665f1c2a9b1e8a0012a4c222"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "type": "string",
+                "example": "665f1c2a9b1e8a0012a4c111"
+              },
+              {
+                "$ref": "#/components/schemas/PublicUser"
+              }
+            ],
+            "description": "Post author (populated on read endpoints)."
+          },
+          "content": {
+            "type": "string",
+            "example": "Hello world, this is my first post!"
+          },
+          "image": {
+            "type": "string",
+            "example": "https://example.com/images/sunset.jpg"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Registration successful"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "user": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "example": 42
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 5
+          },
+          "hasNextPage": {
+            "type": "boolean",
+            "example": true
+          },
+          "hasPrevPage": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Something went wrong"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string",
+                      "example": "email"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Email is required"
+                    }
+                  }
+                }
+              ]
+            },
+            "example": []
+          }
+        }
+      }
+    },
+    "parameters": {
+      "PageParam": {
+        "in": "query",
+        "name": "page",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "description": "Page number (1-based)."
+      },
+      "LimitParam": {
+        "in": "query",
+        "name": "limit",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        },
+        "description": "Number of items per page (max 100)."
+      },
+      "PostIdParam": {
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "example": "665f1c2a9b1e8a0012a4c222"
+        },
+        "description": "MongoDB ObjectId of the post."
+      },
+      "UserIdParam": {
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "example": "665f1c2a9b1e8a0012a4c111"
+        },
+        "description": "MongoDB ObjectId of the user."
+      }
+    },
+    "responses": {
+      "ValidationError": {
+        "description": "Request validation failed (HTTP 400).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Validation failed",
+              "errors": [
+                {
+                  "field": "email",
+                  "message": "A valid email is required"
+                },
+                {
+                  "field": "password",
+                  "message": "Password must be at least 8 characters"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing, invalid or expired JWT (HTTP 401).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Authentication required. Provide a valid Bearer token.",
+              "errors": []
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "You do not have permission to perform this action (HTTP 403).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "You are not allowed to modify this post",
+              "errors": []
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The requested resource does not exist (HTTP 404).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Post not found",
+              "errors": []
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "A unique value is already in use (HTTP 409).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Email is already registered",
+              "errors": []
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "Unexpected server error (HTTP 500). Details are logged on the server, never returned to the client.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Something went wrong on the server",
+              "errors": []
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/users": {
+      "get": {
+        "summary": "List all users",
+        "description": "Returns a paginated list of public user profiles, newest accounts first.\nEmail addresses and passwords are never included.\n\n**Pagination:** `?page=1&limit=10` (limit is capped at 100).\nThe `meta` object contains totals and next/previous page hints.\n",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Users retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "users": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/PublicUser"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Users retrieved successfully",
+                  "data": {
+                    "users": [
+                      {
+                        "_id": "665f1c2a9b1e8a0012a4c111",
+                        "name": "Ada Lovelace",
+                        "username": "ada_lovelace",
+                        "profilePicture": "https://example.com/avatars/ada.png",
+                        "bio": "Mathematician. First programmer.",
+                        "createdAt": "2026-01-01T10:00:00.000Z"
+                      }
+                    ]
+                  },
+                  "meta": {
+                    "page": 1,
+                    "limit": 10,
+                    "total": 1,
+                    "totalPages": 1,
+                    "hasNextPage": false,
+                    "hasPrevPage": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/users/me": {
+      "put": {
+        "summary": "Update my profile",
+        "description": "Updates the authenticated user's own profile. No other account can be\nmodified with this endpoint.\n\n**Allowed fields:** `name`, `username`, `email`, `profilePicture`, `bio`.\n\n**Protected fields are rejected with HTTP 400:** `password`, `role`,\n`isAdmin`, `_id`, `createdAt`, `updatedAt`. Send at least one allowed field.\n\nChanging `email` or `username` checks uniqueness and returns `409`\nwhen the value is already taken.\n",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50,
+                    "example": "Ada King"
+                  },
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "example": "ada_king"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "ada.king@example.com"
+                  },
+                  "profilePicture": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "https://example.com/avatars/ada-new.png"
+                  },
+                  "bio": {
+                    "type": "string",
+                    "maxLength": 160,
+                    "example": "Mathematician and writer."
+                  }
+                }
+              },
+              "example": {
+                "name": "Ada King",
+                "bio": "Mathematician and writer.",
+                "profilePicture": "https://example.com/avatars/ada-new.png"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Profile updated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Profile updated successfully",
+                  "data": {
+                    "user": {
+                      "_id": "665f1c2a9b1e8a0012a4c111",
+                      "name": "Ada King",
+                      "username": "ada_lovelace",
+                      "email": "ada@example.com",
+                      "profilePicture": "https://example.com/avatars/ada-new.png",
+                      "bio": "Mathematician and writer.",
+                      "createdAt": "2026-01-01T10:00:00.000Z",
+                      "updatedAt": "2026-01-03T12:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or a protected field was supplied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "You cannot update protected field(s): role",
+                  "errors": []
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete my account",
+        "description": "Permanently deletes the authenticated user's account **and all posts\nthey created**. This action cannot be undone.\n\nThe response contains the deleted user's public profile and the number\nof posts that were removed.\n",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Account deleted successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deletedPosts": {
+                          "type": "integer",
+                          "example": 3
+                        },
+                        "user": {
+                          "$ref": "#/components/schemas/PublicUser"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Account deleted successfully",
+                  "data": {
+                    "deletedPosts": 3,
+                    "user": {
+                      "_id": "665f1c2a9b1e8a0012a4c111",
+                      "name": "Ada Lovelace",
+                      "username": "ada_lovelace",
+                      "profilePicture": "",
+                      "bio": "",
+                      "createdAt": "2026-01-01T10:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "summary": "Get a user's public profile",
+        "description": "Returns another user's public profile. The email address is hidden for\nprivacy; only the authenticated owner can see it via `/api/auth/me`.\n",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public user profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "User retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/components/schemas/PublicUser"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "User retrieved successfully",
+                  "data": {
+                    "user": {
+                      "_id": "665f1c2a9b1e8a0012a4c111",
+                      "name": "Ada Lovelace",
+                      "username": "ada_lovelace",
+                      "profilePicture": "https://example.com/avatars/ada.png",
+                      "bio": "Mathematician. First programmer.",
+                      "createdAt": "2026-01-01T10:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The supplied id is not a valid MongoDB ObjectId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Validation failed",
+                  "errors": [
+                    {
+                      "field": "id",
+                      "message": "user id must be a valid MongoDB ObjectId"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/posts": {
+      "post": {
+        "summary": "Create a post",
+        "description": "Creates a post owned by the authenticated user. The author is taken\nfrom the JWT — any `user` value in the request body is ignored.\n\n**Required:** `content` (1–2000 characters).\n**Optional:** `image` (absolute http/https URL).\n",
+        "tags": [
+          "Posts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "example": "Hello world, this is my first post!"
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "https://example.com/images/sunset.jpg"
+                  }
+                }
+              },
+              "example": {
+                "content": "Hello world, this is my first post!",
+                "image": "https://example.com/images/sunset.jpg"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Post created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Post created successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "post": {
+                          "$ref": "#/components/schemas/Post"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Post created successfully",
+                  "data": {
+                    "post": {
+                      "_id": "665f1c2a9b1e8a0012a4c222",
+                      "user": {
+                        "_id": "665f1c2a9b1e8a0012a4c111",
+                        "name": "Ada Lovelace",
+                        "username": "ada_lovelace",
+                        "profilePicture": "https://example.com/avatars/ada.png",
+                        "bio": "Mathematician. First programmer."
+                      },
+                      "content": "Hello world, this is my first post!",
+                      "image": "https://example.com/images/sunset.jpg",
+                      "createdAt": "2026-01-02T08:00:00.000Z",
+                      "updatedAt": "2026-01-02T08:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "get": {
+        "summary": "Get all posts",
+        "description": "Returns the public feed, **newest first**, with the author's basic\ninformation populated on every post.\n\n**Pagination:** `?page=1&limit=10` (limit is capped at 100).\nUse `meta.hasNextPage` to know when to load more in React.\n",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of posts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Posts retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "posts": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Post"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Posts retrieved successfully",
+                  "data": {
+                    "posts": [
+                      {
+                        "_id": "665f1c2a9b1e8a0012a4c222",
+                        "user": {
+                          "_id": "665f1c2a9b1e8a0012a4c111",
+                          "name": "Ada Lovelace",
+                          "username": "ada_lovelace",
+                          "profilePicture": "https://example.com/avatars/ada.png",
+                          "bio": "Mathematician. First programmer."
+                        },
+                        "content": "Hello world, this is my first post!",
+                        "image": "",
+                        "createdAt": "2026-01-02T08:00:00.000Z",
+                        "updatedAt": "2026-01-02T08:00:00.000Z"
+                      }
+                    ]
+                  },
+                  "meta": {
+                    "page": 1,
+                    "limit": 10,
+                    "total": 1,
+                    "totalPages": 1,
+                    "hasNextPage": false,
+                    "hasPrevPage": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/posts/user/{userId}": {
+      "get": {
+        "summary": "Get all posts by a specific user",
+        "description": "Returns every post written by one user, newest first, with pagination.\nReturns `404` if the user does not exist.\n\n**Pagination:** `?page=1&limit=10` (limit is capped at 100).\n",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "665f1c2a9b1e8a0012a4c111"
+            },
+            "description": "MongoDB ObjectId of the post author."
+          },
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of the user's posts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "User posts retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "author": {
+                          "$ref": "#/components/schemas/PublicUser"
+                        },
+                        "posts": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Post"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "User posts retrieved successfully",
+                  "data": {
+                    "author": {
+                      "_id": "665f1c2a9b1e8a0012a4c111",
+                      "name": "Ada Lovelace",
+                      "username": "ada_lovelace",
+                      "profilePicture": "https://example.com/avatars/ada.png",
+                      "bio": "Mathematician. First programmer.",
+                      "createdAt": "2026-01-01T10:00:00.000Z"
+                    },
+                    "posts": [
+                      {
+                        "_id": "665f1c2a9b1e8a0012a4c222",
+                        "user": "665f1c2a9b1e8a0012a4c111",
+                        "content": "Hello world, this is my first post!",
+                        "image": "",
+                        "createdAt": "2026-01-02T08:00:00.000Z",
+                        "updatedAt": "2026-01-02T08:00:00.000Z"
+                      }
+                    ]
+                  },
+                  "meta": {
+                    "page": 1,
+                    "limit": 10,
+                    "total": 1,
+                    "totalPages": 1,
+                    "hasNextPage": false,
+                    "hasPrevPage": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid user id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Validation failed",
+                  "errors": [
+                    {
+                      "field": "userId",
+                      "message": "user id must be a valid MongoDB ObjectId"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/posts/{id}": {
+      "get": {
+        "summary": "Get a single post",
+        "description": "Returns one post by its MongoDB ObjectId with the author populated.",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PostIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The requested post.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Post retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "post": {
+                          "$ref": "#/components/schemas/Post"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Post retrieved successfully",
+                  "data": {
+                    "post": {
+                      "_id": "665f1c2a9b1e8a0012a4c222",
+                      "user": {
+                        "_id": "665f1c2a9b1e8a0012a4c111",
+                        "name": "Ada Lovelace",
+                        "username": "ada_lovelace",
+                        "profilePicture": "",
+                        "bio": ""
+                      },
+                      "content": "Hello world, this is my first post!",
+                      "image": "",
+                      "createdAt": "2026-01-02T08:00:00.000Z",
+                      "updatedAt": "2026-01-02T08:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid post id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Validation failed",
+                  "errors": [
+                    {
+                      "field": "id",
+                      "message": "post id must be a valid MongoDB ObjectId"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a post (owner only)",
+        "description": "Updates the content and/or image of a post.\n\n**Authorization:** the JWT must belong to the post's author.\nAny other authenticated user receives `403 Forbidden`.\n\nSend at least one of `content` or `image`. Sending `image: \"\"` removes\nthe image.\n",
+        "tags": [
+          "Posts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PostIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "example": "Updated post content."
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "https://example.com/images/new-image.jpg"
+                  }
+                }
+              },
+              "example": {
+                "content": "Updated post content.",
+                "image": "https://example.com/images/new-image.jpg"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Post updated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "post": {
+                          "$ref": "#/components/schemas/Post"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Post updated successfully",
+                  "data": {
+                    "post": {
+                      "_id": "665f1c2a9b1e8a0012a4c222",
+                      "user": {
+                        "_id": "665f1c2a9b1e8a0012a4c111",
+                        "name": "Ada Lovelace",
+                        "username": "ada_lovelace",
+                        "profilePicture": "",
+                        "bio": ""
+                      },
+                      "content": "Updated post content.",
+                      "image": "https://example.com/images/new-image.jpg",
+                      "createdAt": "2026-01-02T08:00:00.000Z",
+                      "updatedAt": "2026-01-02T09:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a post (owner only)",
+        "description": "Permanently deletes a post.\n\n**Authorization:** only the post's author can delete it. Other\nauthenticated users receive `403 Forbidden`.\n",
+        "tags": [
+          "Posts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PostIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post deleted successfully. The deleted post is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Post deleted successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "post": {
+                          "$ref": "#/components/schemas/Post"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Post deleted successfully",
+                  "data": {
+                    "post": {
+                      "_id": "665f1c2a9b1e8a0012a4c222",
+                      "user": "665f1c2a9b1e8a0012a4c111",
+                      "content": "Updated post content.",
+                      "image": "",
+                      "createdAt": "2026-01-02T08:00:00.000Z",
+                      "updatedAt": "2026-01-02T09:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid post id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Validation failed",
+                  "errors": [
+                    {
+                      "field": "id",
+                      "message": "post id must be a valid MongoDB ObjectId"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Lightweight endpoint used to confirm that the API is running.\nUseful for uptime monitors and for checking the connection from React.\n",
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "The API is healthy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "API is healthy"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "example": "ok"
+                        },
+                        "uptime": {
+                          "type": "number",
+                          "example": 123.45
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2026-01-01T10:00:00.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register a new user",
+        "description": "Creates a new account, hashes the password with bcrypt and returns a JWT.\n\n**Required fields:** `name`, `username`, `email`, `password`.\n\n* `email` and `username` must be unique (409 if already taken).\n* `username` may contain letters, numbers and underscores (3–30 chars).\n* `password` must be 8–72 characters.\n* The password is **never** included in any response.\n\nThe returned token can be used immediately for authenticated requests.\n",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "username",
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50,
+                    "example": "Ada Lovelace"
+                  },
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "pattern": "^[a-zA-Z0-9_]+$",
+                    "example": "ada_lovelace"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "ada@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "maxLength": 72,
+                    "example": "Secret123!"
+                  }
+                }
+              },
+              "example": {
+                "name": "Ada Lovelace",
+                "username": "ada_lovelace",
+                "email": "ada@example.com",
+                "password": "Secret123!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Registration successful",
+                  "data": {
+                    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY2NWYxYzJhOWIxZThhMDAxMmE0YzExMSIsImlhdCI6MTcxNzUwMDAwMCwiZXhwIjoxNzE4MTA0ODAwfQ.signature",
+                    "user": {
+                      "_id": "665f1c2a9b1e8a0012a4c111",
+                      "name": "Ada Lovelace",
+                      "username": "ada_lovelace",
+                      "email": "ada@example.com",
+                      "profilePicture": "",
+                      "bio": "",
+                      "createdAt": "2026-01-01T10:00:00.000Z",
+                      "updatedAt": "2026-01-01T10:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "409": {
+            "description": "Email or username already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Email is already registered",
+                  "errors": []
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Log in with email and password",
+        "description": "Verifies the email and password and returns a signed JWT.\n\nThe same `401` message is returned for an unknown email and for a wrong\npassword so it is not possible to discover registered emails.\n",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "ada@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "Secret123!"
+                  }
+                }
+              },
+              "example": {
+                "email": "ada@example.com",
+                "password": "Secret123!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Login successful",
+                  "data": {
+                    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY2NWYxYzJhOWIxZThhMDAxMmE0YzExMSIsImlhdCI6MTcxNzUwMDAwMCwiZXhwIjoxNzE4MTA0ODAwfQ.signature",
+                    "user": {
+                      "_id": "665f1c2a9b1e8a0012a4c111",
+                      "name": "Ada Lovelace",
+                      "username": "ada_lovelace",
+                      "email": "ada@example.com",
+                      "profilePicture": "",
+                      "bio": "",
+                      "createdAt": "2026-01-01T10:00:00.000Z",
+                      "updatedAt": "2026-01-01T10:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "description": "Incorrect email or password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Invalid email or password",
+                  "errors": []
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Get the currently authenticated user",
+        "description": "Returns the profile of the user who owns the supplied JWT.\n\nSend the token in the `Authorization` header:\n`Authorization: Bearer <token>` (or use the Swagger **Authorize** button).\n",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current user profile. Includes the private email address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Current user retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "Current user retrieved successfully",
+                  "data": {
+                    "user": {
+                      "_id": "665f1c2a9b1e8a0012a4c111",
+                      "name": "Ada Lovelace",
+                      "username": "ada_lovelace",
+                      "email": "ada@example.com",
+                      "profilePicture": "https://example.com/avatars/ada.png",
+                      "bio": "Mathematician. First programmer.",
+                      "createdAt": "2026-01-01T10:00:00.000Z",
+                      "updatedAt": "2026-01-02T09:30:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "API information",
+        "description": "Returns a welcome message with links to the documentation and health check.",
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Basic API information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Social Media API is running"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "string",
+                          "example": "1.0.0"
+                        },
+                        "docs": {
+                          "type": "string",
+                          "example": "http://localhost:5000/api-docs"
+                        },
+                        "health": {
+                          "type": "string",
+                          "example": "http://localhost:5000/api/health"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api-docs.json": {
+      "get": {
+        "summary": "Download the raw OpenAPI document",
+        "description": "Returns the generated OpenAPI 3.0 JSON. Useful for importing the API\ninto Postman, Insomnia, or for generating a typed frontend client.\n",
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI 3.0 document as JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

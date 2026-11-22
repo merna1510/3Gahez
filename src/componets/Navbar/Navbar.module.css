@@ -1,0 +1,35 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.brand {
+  color: #176b50;
+  font-size: 25px;
+}
+
+.brand:hover {
+  color: #12563f;
+}
+
+.profileButton {
+  background-color: #176b50;
+  color: white;
+  border-radius: 8px;
+  padding: 8px 18px;
+}
+
+.profileButton:hover {
+  background-color: #12563f;
+  color: white;
+}
+
+.navbar :global(.nav-link) {
+  color: #202b27;
+  font-weight: 500;
+}
+
+.navbar :global(.nav-link:hover) {
+  color: #176b50;
+}

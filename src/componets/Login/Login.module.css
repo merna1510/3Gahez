@@ -1,0 +1,39 @@
+.card {
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08) !important;
+  background-color: #ffffff;
+  padding: 2rem;
+}
+
+h2 {
+  color: #2b3035;
+  font-weight: 700;
+}
+
+.form-control {
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus {
+  border-color: #198754;
+  box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.15);
+}
+
+.btnPrimary {
+  background-color: #198754;
+  border-color: #198754;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 600;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btnPrimary:hover {
+  background-color: #157347;
+  border-color: #146c43;
+}
