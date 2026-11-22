@@ -29,7 +29,7 @@ export default function Navbar() {
   return (
     <nav className={`navbar navbar-expand-lg bg-white shadow-sm ${styles.navbar}`}>
       <div className="container">
-        <Link className={`navbar-brand fw-bold ${styles.brand}`} to="/">3Gahez علي الجاهز</Link>
+        <Link className={`navbar-brand fw-bold ${styles.brand}`} to="/">3Gahez على الجاهز</Link>
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-label="Toggle navigation">
           <span className="navbar-toggler-icon" />
         </button>

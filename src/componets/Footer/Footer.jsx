@@ -13,7 +13,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-lg-4 col-md-6">
             <Link to="/" className={styles.logo}>
-              Campus<span>Bite</span>
+              3<span>Gahez</span>
             </Link>
 
             <p className={styles.description}>
@@ -57,7 +57,7 @@ export default function Footer() {
             <h5>Contact Us</h5>
 
             <ul className={styles.contact}>
-              <li>📧 support@campusbite.com</li>
+              <li>📧 support@3Gahez.com</li>
               <li>📍 Egypt</li>
               <li>🕒 Available 24/7</li>
             </ul>
@@ -70,7 +70,7 @@ export default function Footer() {
       <div className={styles.bottom}>
         <div className="container d-flex flex-wrap justify-content-between align-items-center gap-2">
           <p className="mb-0">
-            © 2026 CampusBite. All Rights Reserved.
+            © 2026 3Gahez. All Rights Reserved.
           </p>
 
           <p className="mb-0">

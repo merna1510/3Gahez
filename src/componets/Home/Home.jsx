@@ -142,7 +142,7 @@ export default function Home() {
         <div className="container">
           <span className={styles.tag}>Simple Steps</span>
 
-          <h2 className="fw-bold mt-2 mb-4">How CampusBite Works</h2>
+          <h2 className="fw-bold mt-2 mb-4">How 3Gahez Works</h2>
 
           <div className="row g-4">
             {steps.map((s) => (
